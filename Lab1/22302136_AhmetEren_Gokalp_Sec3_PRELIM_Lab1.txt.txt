@@ -1,0 +1,185 @@
+# part A
+.data
+    .align 4
+array:      .space 80
+
+size:    .asciiz "Enter number of elements (20 max): "
+input:   .asciiz "Enter an integer: "
+
+.text
+    .globl main
+
+main:
+    li $v0, 4
+    la $a0, size
+    syscall # print size string
+
+    li $v0, 5
+    syscall # read integer
+    move $t3, $v0 # t3 is size
+
+    li $t4, 20
+    bgt $t3, $t4, limit # limits size to 20
+
+    j continue_input
+
+limit:
+    li $t3, 20
+
+continue_input:
+    li $t0, 0
+    la $t2, array # t2 is the array base address
+
+read_loop:
+    bge $t0, $t3, display_array # counts up to t3, then proceeds to display array
+
+    li $v0, 4
+    la $a0, input
+    syscall # prints "Enter an integer: " at  each iteration
+
+    li $v0, 5
+    syscall # read integer
+
+    sw $v0, 0($t2)
+
+    addi $t2, $t2, 4 # "pointer" moves to next address
+    addi $t0, $t0, 1 # i++
+
+    j read_loop
+
+display_array:
+    li $t0, 0
+    la $t2, array # points back to starting position
+
+print_loop:
+    bge $t0, $t3, reverse_array # loops until size
+
+    lw $a0, 0($t2)
+    li $v0, 1
+    syscall # loads word into a0 then prints the integer
+
+    li $v0, 11
+    li $a0, 32
+    syscall # print a space
+
+    addi $t2, $t2, 4
+    addi $t0, $t0, 1 # increment pointer and index
+
+    j print_loop
+
+reverse_array:
+    la $t2, array # back to start
+    mul $t4, $t3, 4 # t4 points to last element
+    add $t4, $t4, $t2
+    addi $t4, $t4, -4  
+
+swap_loop:
+    bge $t2, $t4, print_reversed # loops until size
+
+    lw $t5, 0($t2)  
+    lw $t6, 0($t4)  
+
+    sw $t6, 0($t2)  
+    sw $t5, 0($t4) # swapping elements
+
+    addi $t2, $t2, 4
+    addi $t4, $t4, -4 # two pointer indices get changed
+
+    j swap_loop
+
+print_reversed:
+    li $t0, 0
+    la $t2, array
+
+print_loop_reversed:
+    bge $t0, $t3, end # same print logic
+
+    lw $a0, 0($t2)
+    li $v0, 1
+    syscall
+
+    li $v0, 11
+    li $a0, 32
+    syscall
+
+    addi $t2, $t2, 4
+    addi $t0, $t0, 1
+
+    j print_loop_reversed
+
+end:
+    li $v0, 10
+    syscall
+
+# part B
+.data
+	input: .asciiz "Enter an int: "
+	.align 4
+	values: .space 12
+	
+.text
+	.globl main
+	
+main:
+	la $t0, values # the inputs
+	li $t1, 3 # no of inputs
+	li $t8, 0 # counter
+	
+get_inputs:
+	bge $t8, $t1, continue
+	
+	li $v0, 4
+	la $a0, input
+	syscall
+	
+	li $v0, 5
+	syscall
+	sw $v0, 0($t0)
+	
+	addi $t8, $t8, 1
+	addi $t0, $t0, 4
+	j get_inputs
+	
+continue:
+	la $t0, values
+	lw $t1, 0($t0)
+	lw $t2, 4($t0)
+	lw $t3, 8($t0)
+	
+	li $t4, 0 # quotient
+	move $t5, $t1
+	
+BdivC: 
+	blt $t5, $t2, endBdivC
+	sub $t5, $t5, $t2 # t5 -= t2
+	addi $t4, $t4, 1
+	j BdivC
+	
+endBdivC:
+	move $t6, $t1
+
+DmodB:
+	blt $t6, $t1, endDmodB
+	sub $t6, $t6, $t1
+	j DmodB
+	
+endDmodB:
+	sub $t7, $t4, $t2
+	add $t7, $t7, $t6 # t7 is (B / C + D % B - C)
+	
+	li $t4, 0 # quotient for second division
+	move $t5, $t7
+	
+resdivB:
+	blt $t5, $t1, end
+	sub $t5, $t5, $t1
+	addi $t4, $t4, 1
+	j resdivB
+	
+end:
+	li $v0, 1
+	move $a0, $t4
+	syscall
+	
+	li $v0, 10
+	syscall

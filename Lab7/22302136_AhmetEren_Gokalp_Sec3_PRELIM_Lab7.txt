@@ -1,0 +1,184 @@
+CS224
+Lab 7
+Section 3
+Ahmet Eren Gökalp
+22302136
+
+a)
+
+TRISBbits.TRISB0 = 1;  // BUTTON0 input
+TRISBbits.TRISB1 = 1;  // BUTTON1 input
+
+TRISDbits.TRISD0 = 0;  // MOTOR_CW output
+TRISDbits.TRISD1 = 0;  // MOTOR_CCW output
+
+b)
+
+#include <stdint.h>
+#include "built_in.h"    // mikroC built-in Delay_ms
+
+// Pin aliases
+#define BUTTON0     PORTB.RB0
+#define BUTTON1     PORTB.RB1
+#define MOTOR_CW    LATD.LATD0
+#define MOTOR_CCW   LATD.LATD1
+
+// Initialize
+void init_io(void) {
+    // Input buttons
+    TRISBbits.TRISB0 = 1;
+    TRISBbits.TRISB1 = 1;
+
+    // Output pins
+    TRISDbits.TRISD0 = 0;
+    TRISDbits.TRISD1 = 0;
+
+    // Motor is off at the start
+    MOTOR_CW = 0;
+    MOTOR_CCW = 0;
+}
+
+void main(void) {
+    init_io(); // Call initialize
+
+    while (1) {
+        if (BUTTON0 && BUTTON1) {
+            // Both pressed: immediately stop
+            MOTOR_CW = 0;
+            MOTOR_CCW = 0;
+        }
+	// If code comes here, Button1 isn't pressed because that condition was already checked
+        else if (BUTTON0) {
+            Delay_ms(1000);
+
+            MOTOR_CW = 1;
+            MOTOR_CCW = 0;
+            Delay_ms(1000);
+
+            MOTOR_CW = 0;
+        }
+	// Same logic here
+        else if (BUTTON1) {
+
+            Delay_ms(1000);
+
+            MOTOR_CW = 0;
+            MOTOR_CCW = 1;
+            Delay_ms(1000);
+
+            MOTOR_CCW = 0;
+        }
+        else {
+	// No buttons pressed
+            MOTOR_CW = 0;
+            MOTOR_CCW = 0;
+        }
+    }
+}
+
+
+c)
+
+TRISAbits.TRISA0 = 0; 
+TRISAbits.TRISA1 = 0; 
+TRISAbits.TRISA2 = 0;
+TRISAbits.TRISA3 = 0; 
+TRISAbits.TRISA4 = 0; 
+TRISAbits.TRISA5 = 0;
+TRISAbits.TRISA6 = 0;
+
+TRISGbits.TRISG0 = 0; 
+TRISGbits.TRISG1 = 0;
+TRISGbits.TRISG2 = 0; 
+TRISGbits.TRISG3 = 0;
+
+d)
+
+#include <stdint.h>
+#include "built_in.h"    // Delay thing
+
+// 7-segment encoding
+const uint8_t segMap[10] = {
+    0x3F, // 0
+    0x06, // 1
+    0x5B, // 2
+    0x4F, // 3
+    0x66, // 4
+    0x6D, // 5
+    0x7D, // 6
+    0x07, // 7
+    0x7F, // 8
+    0x6F  // 9
+};
+
+// Initialization
+void init_seven_seg(void) {
+    // Configure segment pins as outputs
+    TRISAbits.TRISA0 = 0;
+    TRISAbits.TRISA1 = 0;
+    TRISAbits.TRISA2 = 0;
+    TRISAbits.TRISA3 = 0;
+    TRISAbits.TRISA4 = 0;
+    TRISAbits.TRISA5 = 0;
+    TRISAbits.TRISA6 = 0;
+
+    // Configure digit select pins as outputs
+    TRISGbits.TRISG0 = 0;
+    TRISGbits.TRISG1 = 0;
+    TRISGbits.TRISG2 = 0;
+    TRISGbits.TRISG3 = 0;
+}
+
+// iterative fibonacci function
+uint32_t fib(uint8_t n) {
+    if (n < 2) return 1;
+    uint32_t a = 1, b = 1, temp;
+    for (uint8_t i = 2; i <= n; i++) {
+        temp = a + b;
+        a = b;
+        b = temp;
+    }
+    return b;
+}
+
+// Display number on seven segment display
+void display_value(uint32_t value) {
+    uint8_t digits[4];
+    // Split value 4 digits
+    digits[0] = (value / 1000) % 10;
+    digits[1] = (value / 100) % 10;
+    digits[2] = (value / 10) % 10;
+    digits[3] = value % 10;
+
+    for (uint8_t pos = 0; pos < 4; pos++) {
+        // send segment bits
+        LATAbits.LATA0 = (segMap[digits[pos]] & 0x01);
+        LATAbits.LATA1 = (segMap[digits[pos]] >> 1) & 0x01;
+        LATAbits.LATA2 = (segMap[digits[pos]] >> 2) & 0x01;
+        LATAbits.LATA3 = (segMap[digits[pos]] >> 3) & 0x01;
+        LATAbits.LATA4 = (segMap[digits[pos]] >> 4) & 0x01;
+        LATAbits.LATA5 = (segMap[digits[pos]] >> 5) & 0x01;
+        LATAbits.LATA6 = (segMap[digits[pos]] >> 6) & 0x01;
+
+        // Activate one digit at a time
+        LATG = (1 << pos);
+        Delay_ms(1);
+        // Turn off digits
+        LATG = 0;
+    }
+}
+
+// main
+void main(void) {
+    init_seven_seg();
+    uint8_t index = 0;
+
+    while (1) {
+        // Calculate Fibonacci and display
+        uint32_t value = fib(index);
+        display_value(value);
+        // Wait proportional to the value
+        Delay_ms(value * 100);
+        index++;
+    }
+}
